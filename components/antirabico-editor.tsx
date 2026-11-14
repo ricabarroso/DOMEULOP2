@@ -1,0 +1,503 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useDocumentSession } from "@/components/document-session-provider";
+import SavedDatalists, { findSavedByValue, normalizeSaved, parseSavedDetail } from "@/components/saved-datalists";
+import SisregImportButton from "@/components/sisreg-import-button";
+import {
+  antirabicoSections,
+  initialAntirabicoValues,
+  type AntirabicoField,
+  type AntirabicoValue,
+  type AntirabicoValues,
+} from "@/lib/antirabico-form";
+import { createAntirabicoPdf } from "@/lib/create-antirabico-pdf";
+
+const originalPdfUrl = "/atendimento-antirrabico.pdf";
+
+export default function AntirabicoEditor() {
+  const {
+    sharedData,
+    institutions,
+    patients,
+    savedValues,
+    updateSharedData,
+    rememberInstitution,
+    rememberValues,
+    rememberCurrentPatient,
+    applyPatient,
+  } = useDocumentSession();
+  const [localValues, setValues] = useState<AntirabicoValues>(initialAntirabicoValues);
+  const values: AntirabicoValues = useMemo(() => ({
+    ...localValues,
+    patientName: sharedData.paciente,
+    birthDate: sharedData.nascimento,
+    patientCns: sharedData.cns,
+    sex: sharedData.sexo,
+    motherName: sharedData.nomeMae,
+    phone: sharedData.telefone,
+    street: sharedData.ruaPaciente,
+    streetNumber: sharedData.numeroEnderecoPaciente,
+    complement: sharedData.complementoEnderecoPaciente,
+    neighborhood: sharedData.bairroPaciente,
+    district: sharedData.distritoPaciente,
+    residenceCity: sharedData.municipioResidencia,
+    residenceIbge: sharedData.codigoIbge,
+    residenceState: sharedData.uf,
+    cep: sharedData.cep,
+  }), [localValues, sharedData]);
+  const [filledPdfUrl, setFilledPdfUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cnesMessage, setCnesMessage] = useState("");
+  const [cnesMessageType, setCnesMessageType] = useState<"success" | "error">("error");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (filledPdfUrl) URL.revokeObjectURL(filledPdfUrl);
+    };
+  }, [filledPdfUrl]);
+
+  const cnes = typeof values.notificationCnes === "string" ? values.notificationCnes : "";
+  useEffect(() => {
+    if (!/^\d{7}$/.test(cnes)) return;
+    const controller = new AbortController();
+    const lookupInstitution = async () => {
+      try {
+        const response = await fetch(`/api/cnes/${cnes}`, { signal: controller.signal });
+        const data: unknown = await response.json();
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          const message =
+            typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+              ? data.error
+              : "Não foi possível consultar o estabelecimento no CNES.";
+          setCnesMessage(message);
+          setCnesMessageType("error");
+          return;
+        }
+
+        if (typeof data !== "object" || data === null || !("nome" in data) || typeof data.nome !== "string") {
+          setCnesMessage("O serviço CNES retornou dados incompatíveis.");
+          setCnesMessageType("error");
+          return;
+        }
+
+        const nome = data.nome.slice(0, 80);
+        setValues((current) => ({ ...current, notificationUnit: nome }));
+        rememberInstitution({
+          nome,
+          cnes,
+          endereco: "endereco" in data && typeof data.endereco === "string" ? data.endereco : "",
+        });
+        setFilledPdfUrl(null);
+        setCnesMessage("Estabelecimento localizado. Confira os dados da unidade.");
+        setCnesMessageType("success");
+      } catch (lookupError) {
+        if (controller.signal.aborted) return;
+        setCnesMessage(
+          lookupError instanceof Error
+            ? lookupError.message
+            : "Não foi possível consultar o estabelecimento no CNES.",
+        );
+        setCnesMessageType("error");
+      }
+    };
+    void lookupInstitution();
+    return () => controller.abort();
+  }, [cnes, rememberInstitution]);
+
+  const updateValue = (key: string, value: AntirabicoValue) => {
+    if (key === "notificationUnit" && typeof value === "string") {
+      const suggestion = institutions.find((item) =>
+        item.nome.trim().toLocaleLowerCase("pt-BR") === value.trim().toLocaleLowerCase("pt-BR"),
+      );
+      if (suggestion) {
+        setValues((current) => ({
+          ...current,
+          notificationUnit: suggestion.nome,
+          notificationCnes: suggestion.cnes,
+        }));
+      } else {
+        setValues((current) => ({ ...current, notificationUnit: value, notificationCnes: "" }));
+      }
+      setFilledPdfUrl(null);
+      setError(null);
+      return;
+    }
+
+    if (key === "notificationCnes") {
+      setCnesMessage("");
+      setCnesMessageType("error");
+    }
+    setValues((current) => ({ ...current, [key]: value }));
+
+    if ((key === "patientName" || key === "patientCns") && typeof value === "string") {
+      const wanted = key === "patientCns" ? value.replace(/\D/g, "") : normalizeSaved(value);
+      const matches = patients.filter((patient) =>
+        key === "patientCns"
+          ? wanted.length === 15 && (patient.data.cns ?? "").replace(/\D/g, "") === wanted
+          : normalizeSaved(patient.nome) === wanted,
+      );
+      if (matches.length === 1) applyPatient(matches[0]);
+    }
+
+    if (key === "investigatorName" && typeof value === "string") {
+      const saved = findSavedByValue(savedValues, "investigador", value);
+      if (saved) {
+        const detail = parseSavedDetail(saved.detail);
+        setValues((current) => ({
+          ...current,
+          investigatorName: saved.value,
+          investigatorRole: detail.role ?? current.investigatorRole,
+          investigatorUnit: detail.unit ?? current.investigatorUnit,
+          investigatorUnitCode: detail.code ?? current.investigatorUnitCode,
+        }));
+      }
+    }
+    if (typeof value === "string") {
+      switch (key) {
+        case "patientName":
+          updateSharedData({ paciente: value });
+          break;
+        case "birthDate":
+          updateSharedData({ nascimento: value });
+          break;
+        case "patientCns":
+          updateSharedData({ cns: value });
+          break;
+        case "sex":
+          updateSharedData({ sexo: value });
+          break;
+        case "motherName":
+          updateSharedData({ nomeMae: value });
+          break;
+        case "phone":
+          updateSharedData({ telefone: value });
+          break;
+        case "street":
+          updateSharedData({ ruaPaciente: value });
+          break;
+        case "streetNumber":
+          updateSharedData({ numeroEnderecoPaciente: value });
+          break;
+        case "complement":
+          updateSharedData({ complementoEnderecoPaciente: value });
+          break;
+        case "neighborhood":
+          updateSharedData({ bairroPaciente: value });
+          break;
+        case "district":
+          updateSharedData({ distritoPaciente: value });
+          break;
+        case "residenceCity":
+          updateSharedData({ municipioResidencia: value });
+          break;
+        case "residenceIbge":
+          updateSharedData({ codigoIbge: value });
+          break;
+        case "residenceState":
+          updateSharedData({ uf: value });
+          break;
+        case "cep":
+          updateSharedData({ cep: value });
+          break;
+        case "notificationCnes":
+          setValues((current) => ({ ...current, notificationUnit: "" }));
+          break;
+      }
+    }
+    setFilledPdfUrl(null);
+    setError(null);
+  };
+
+  const generatePdf = async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const bytes = await createAntirabicoPdf(values);
+      const pdfBuffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(pdfBuffer).set(bytes);
+      const blob = new Blob([pdfBuffer], { type: "application/pdf" });
+      setFilledPdfUrl(URL.createObjectURL(blob));
+    } catch (generationError) {
+      setError(
+        generationError instanceof Error
+          ? generationError.message
+          : "Não foi possível gerar o PDF preenchido.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const commitSavedEntries = () => {
+    rememberCurrentPatient();
+    const name = typeof values.investigatorName === "string" ? values.investigatorName.trim() : "";
+    if (name.length >= 3) {
+      const text = (key: string) => (typeof values[key] === "string" ? (values[key] as string).trim() : "");
+      rememberValues([
+        {
+          field: "investigador",
+          value: name,
+          detail: JSON.stringify({
+            role: text("investigatorRole"),
+            unit: text("investigatorUnit"),
+            code: text("investigatorUnitCode"),
+          }),
+        },
+      ]);
+    }
+  };
+
+  const savedListFor = (key: string) => {
+    switch (key) {
+      case "notificationUnit":
+        return "antirabico-institution-suggestions";
+      case "patientName":
+        return "patient-name-suggestions";
+      case "patientCns":
+        return "patient-cns-suggestions";
+      case "investigatorName":
+        return "saved-investigador";
+      case "investigatorRole":
+        return "saved-investigador-funcao";
+      case "investigatorUnit":
+        return "saved-investigador-unidade";
+      case "investigatorUnitCode":
+        return "saved-investigador-codigo";
+      default:
+        return undefined;
+    }
+  };
+
+  return (
+    <main className="min-h-screen px-4 py-8 text-slate-900 md:px-8" onBlur={commitSavedEntries}>
+      <SavedDatalists />
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="rounded-3xl border border-emerald-100 bg-white/95 p-6 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link href="/" className="text-sm font-semibold text-emerald-800 hover:underline">
+              ← Todos os documentos
+            </Link>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={generatePdf}
+                disabled={isGenerating}
+                className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isGenerating ? "Gerando PDF..." : "Gerar ficha preenchida"}
+              </button>
+              <a
+                href={originalPdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl border border-emerald-300 bg-white px-5 py-3 font-semibold text-emerald-900 transition hover:bg-emerald-50"
+              >
+                Abrir ficha original
+              </a>
+            </div>
+          </div>
+          <h1 className="mt-3 text-2xl font-bold md:text-3xl">Atendimento Anti-Rábico Humano</h1>
+          <p className="mt-3 max-w-4xl text-base leading-7 text-slate-700">
+            Preencha os campos conforme a ficha original. Ao gerar, os dados são colocados sobre o PDF original,
+            preservando o formulário para visualizar, imprimir ou baixar. O PDF é gerado localmente no navegador
+            e o CNS do paciente não é enviado ao CNES. Paciente, unidade e investigador ficam salvos na sua conta
+            para preenchimento rápido.
+          </p>
+          <p className="mt-3 max-w-4xl text-base leading-7 text-slate-600">
+            Informe o código CID-10 no campo do formulário, conforme a avaliação. O arquivo indica SVS — 27/09/2005;
+            confirme a versão e as orientações vigentes antes de usar.
+          </p>
+          <div className="mt-4">
+            <SisregImportButton onImport={updateSharedData} />
+          </div>
+        </header>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
+          <div className="space-y-5">
+            <datalist id="antirabico-institution-suggestions">
+              {institutions.map((institution) => (
+                <option key={`${institution.cnes}-${institution.nome}`} value={institution.nome} label={institution.cnes ? `CNES ${institution.cnes}` : undefined} />
+              ))}
+            </datalist>
+            {cnesMessage && (
+              <p
+                role="status"
+                aria-live="polite"
+                className={`rounded-xl border p-3 text-sm ${
+                  cnesMessageType === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-red-200 bg-red-50 text-red-900"
+                }`}
+              >
+                {cnesMessage}
+              </p>
+            )}
+            {antirabicoSections.map((section) => (
+              <section key={section.title} className="rounded-2xl border border-emerald-100 bg-white/95 p-6 shadow-sm md:p-7">
+                <h2 className="mb-5 text-xl font-semibold tracking-tight">{section.title}</h2>
+                <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
+                  {section.fields.map((field) => (
+                    <FieldInput
+                      key={field.key}
+                      field={field}
+                      value={values[field.key] ?? (field.type === "checkboxes" ? [] : "")}
+                      disabled={isGenerating}
+                      list={savedListFor(field.key)}
+                      onChange={(value) => updateValue(field.key, value)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {error && (
+              <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+                {error}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={generatePdf}
+                disabled={isGenerating}
+                className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isGenerating ? "Gerando PDF..." : "Gerar ficha preenchida"}
+              </button>
+              <a
+                href={originalPdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl border border-emerald-300 bg-white px-5 py-3 font-semibold text-emerald-900 hover:bg-emerald-50"
+              >
+                Abrir ficha original
+              </a>
+              {filledPdfUrl && (
+                <>
+                  <a
+                    href={filledPdfUrl}
+                    download="atendimento-antirrabico-preenchido.pdf"
+                    className="rounded-xl border border-emerald-300 bg-white px-5 py-3 font-semibold text-emerald-900 hover:bg-emerald-50"
+                  >
+                    Baixar PDF preenchido
+                  </a>
+                  <a
+                    href={filledPdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-xl border border-emerald-300 bg-white px-5 py-3 font-semibold text-emerald-900 hover:bg-emerald-50"
+                  >
+                    Abrir para imprimir
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+
+          <section className="space-y-3 lg:sticky lg:top-4">
+            <h2 className="text-lg font-semibold">{filledPdfUrl ? "Pré-visualização preenchida" : "Ficha original"}</h2>
+            <iframe
+              title={filledPdfUrl ? "Pré-visualização da ficha antirrábica preenchida" : "Ficha original de Atendimento Anti-Rábico Humano"}
+              src={`${filledPdfUrl ?? originalPdfUrl}#view=FitH`}
+              className="h-[82vh] min-h-[640px] w-full rounded-2xl border border-emerald-200 bg-white shadow-sm"
+            />
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function FieldInput({
+  field,
+  value,
+  disabled,
+  onChange,
+  list,
+}: {
+  field: AntirabicoField;
+  value: AntirabicoValue;
+  disabled: boolean;
+  onChange: (value: AntirabicoValue) => void;
+  list?: string;
+}) {
+  const id = `antirabico-${field.key}`;
+  const controlClassName =
+    "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-6 text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700";
+
+  if (field.type === "checkboxes") {
+    const selected = Array.isArray(value) ? value : [];
+    return (
+      <fieldset className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 md:col-span-2">
+        <legend className="px-1 text-base font-semibold leading-6 text-slate-800">{field.label}</legend>
+        <div className="mt-2 flex flex-wrap gap-x-6 gap-y-3">
+          {field.options.map((option) => (
+            <label key={option.value} className="inline-flex items-center gap-2.5 text-base leading-6 text-slate-700">
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={selected.includes(option.value)}
+                onChange={(event) =>
+                  onChange(
+                    event.target.checked
+                      ? [...selected, option.value]
+                      : selected.filter((current) => current !== option.value),
+                  )
+                }
+                className="size-5 accent-emerald-700"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
+
+  return (
+    <label htmlFor={id} className={field.type === "textarea" ? "md:col-span-2" : undefined}>
+      <span className="block text-base font-semibold leading-6 text-slate-800">{field.label}</span>
+      {field.type === "select" ? (
+        <select
+          id={id}
+          disabled={disabled}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          className={controlClassName}
+        >
+          <option value="">Selecione</option>
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : field.type === "textarea" ? (
+        <textarea
+          id={id}
+          disabled={disabled}
+          value={typeof value === "string" ? value : ""}
+          maxLength={field.maxLength}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${controlClassName} min-h-32`}
+        />
+      ) : (
+        <input
+          id={id}
+          disabled={disabled}
+          type={field.type}
+          value={typeof value === "string" ? value : ""}
+          maxLength={field.maxLength}
+          list={list}
+          onChange={(event) => onChange(event.target.value)}
+          className={controlClassName}
+        />
+      )}
+    </label>
+  );
+}
