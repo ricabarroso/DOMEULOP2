@@ -40,7 +40,7 @@ export default function Home() {
     <main className="min-h-screen px-4 py-10 text-slate-900 md:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
         <header className="rounded-3xl border border-slate-200 bg-white/85 p-8 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-700">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-green-600">
             Gerador de documentos médicos
           </p>
           <h1 className="mt-3 max-w-3xl text-3xl font-bold md:text-5xl">
@@ -62,7 +62,7 @@ export default function Home() {
             <Link
               key={document.href}
               href={document.href}
-              className="group rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-600"
+              className="group rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-400 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-500"
             >
               <span className={`mb-5 block h-2 rounded-full bg-gradient-to-r ${document.accent}`} />
               <h2 className="text-xl font-semibold">{document.title}</h2>

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3faf5;
-  --foreground: #10233d;
-  --card: rgba(255, 255, 255, 0.86);
-  --border: rgba(15, 23, 42, 0.12);
+  --background: #f0e9d8;
+  --foreground: #271f14;
+  --card: rgba(250, 245, 233, 0.92);
+  --border: rgba(62, 44, 28, 0.16);
 }
 
 @theme inline {
@@ -12,6 +12,68 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Paleta "Ralph Lauren": verde hunter, dourado, marrom escuro e bege.
+ * Remapeia os tokens padrão do Tailwind para que toda a interface
+ * herde o tema sem alterar a geração/impressão dos documentos.
+ */
+@theme {
+  /* branco -> creme */
+  --color-white: #faf5e9;
+
+  /* slate -> neutros quentes (taupe/marrom) */
+  --color-slate-50: #faf6ec;
+  --color-slate-100: #f1eada;
+  --color-slate-200: #e3d8c2;
+  --color-slate-300: #cbbc9f;
+  --color-slate-400: #a1906f;
+  --color-slate-500: #817050;
+  --color-slate-600: #655741;
+  --color-slate-700: #4d4130;
+  --color-slate-800: #382e20;
+  --color-slate-900: #271f14;
+  --color-slate-950: #1a140c;
+
+  /* emerald -> verde hunter */
+  --color-emerald-50: #f1f5f0;
+  --color-emerald-100: #e1eadf;
+  --color-emerald-200: #c5d6c4;
+  --color-emerald-300: #9fbca0;
+  --color-emerald-400: #6c9676;
+  --color-emerald-500: #45775a;
+  --color-emerald-600: #2e5f46;
+  --color-emerald-700: #1f4d37;
+  --color-emerald-800: #163b2a;
+  --color-emerald-900: #0e2b1f;
+  --color-emerald-950: #081d15;
+
+  /* green -> dourado */
+  --color-green-50: #fbf6e7;
+  --color-green-100: #f5ebce;
+  --color-green-200: #eadaa4;
+  --color-green-300: #dcc377;
+  --color-green-400: #cbac54;
+  --color-green-500: #b8953c;
+  --color-green-600: #9c7b2f;
+  --color-green-700: #7d6126;
+  --color-green-800: #5f4a1f;
+  --color-green-900: #463718;
+  --color-green-950: #2c220e;
+
+  /* sky -> marrom escuro (detalhes informativos) */
+  --color-sky-50: #f6efe3;
+  --color-sky-100: #ecdfc9;
+  --color-sky-200: #dcc6a3;
+  --color-sky-300: #c5a87f;
+  --color-sky-400: #a98557;
+  --color-sky-500: #8d6a40;
+  --color-sky-600: #755430;
+  --color-sky-700: #5e4225;
+  --color-sky-800: #49331d;
+  --color-sky-900: #362514;
+  --color-sky-950: #23170c;
 }
 
 * {
@@ -25,14 +87,43 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top, rgba(34, 197, 94, 0.1), transparent 35%),
+    radial-gradient(circle at top, rgba(31, 77, 55, 0.1), transparent 42%),
+    radial-gradient(circle at 85% 110%, rgba(184, 149, 60, 0.08), transparent 45%),
     var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
 ::selection {
-  background: rgba(21, 128, 61, 0.18);
+  background: rgba(184, 149, 60, 0.28);
+}
+
+/* Tipografia exclusiva dos botões */
+button,
+[role="button"] {
+  font-family: var(--font-button), Georgia, serif;
+  letter-spacing: 0.045em;
+}
+
+/* Animação sutil de clique em elementos interativos */
+@media screen {
+  button,
+  [role="button"],
+  a {
+    transition:
+      transform 140ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  button:active:not(:disabled),
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.97);
+  }
 }
 
 @media print {
