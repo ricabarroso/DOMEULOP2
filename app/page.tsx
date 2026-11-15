@@ -44,7 +44,7 @@ export default function Home() {
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-green-700">
             DOMEULOP <span className="mx-1 text-slate-400">/</span> Documentos clínicos
           </p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-emerald-950 md:text-5xl">
+          <h1 className="mt-4 max-w-3xl text-3xl font-normal leading-[1.16] tracking-[0.015em] text-emerald-950 md:text-4xl">
             Documentos médicos, com clareza e cuidado.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-700">
