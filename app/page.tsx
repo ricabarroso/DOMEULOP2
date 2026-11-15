@@ -39,47 +39,66 @@ export default function Home() {
   return (
     <main className="min-h-screen px-4 py-10 text-slate-900 md:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header className="rounded-3xl border border-slate-200 bg-white/85 p-8 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-green-600">
-            Gerador de documentos médicos
+        <header className="rounded-3xl border border-green-300 bg-white/85 p-7 shadow-lg shadow-amber-950/10 md:p-12">
+          <div aria-hidden="true" className="mb-6 h-1.5 w-20 rounded-full bg-green-500" />
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-green-700">
+            DOMEULOP <span className="mx-1 text-slate-400">/</span> Documentos clínicos
           </p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-bold md:text-5xl">
-            Escolha um documento para preencher ou gerar em PDF
+          <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-slate-950 md:text-5xl">
+            Documentos médicos, com clareza e cuidado.
           </h1>
-          <p className="mt-4 max-w-2xl leading-7 text-slate-600">
-            Preencha os documentos na aplicação e gere PDFs; a ficha antirrábica mantém o formulário original.
+          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-700">
+            Preencha documentos clínicos e gere PDFs prontos para imprimir, em um só lugar.
           </p>
+          <Link
+            href="#documentos"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-600"
+          >
+            Escolher documento <span aria-hidden="true">↓</span>
+          </Link>
         </header>
 
-        <section aria-label="Conta e acesso" className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm">
+        <section aria-label="Conta e acesso" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-300 bg-white/85 px-5 py-4 shadow-sm">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Acesso à plataforma</h2>
+            <p className="mt-0.5 text-sm text-slate-600">Entre para acessar sua conta e seus modelos salvos.</p>
+          </div>
           <AccountDashboard />
         </section>
 
         <MedicationSearch />
 
-        <section aria-label="Tipos de documentos" className="grid gap-5 md:grid-cols-2">
-          {documents.map((document) => (
-            <Link
-              key={document.href}
-              href={document.href}
-              className="group rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-400 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-500"
-            >
-              <span className={`mb-5 block h-2 rounded-full bg-gradient-to-r ${document.accent}`} />
-              <h2 className="text-xl font-semibold">{document.title}</h2>
-              <p className="mt-2 text-slate-600">{document.description}</p>
-              <span className="mt-5 inline-flex font-semibold text-emerald-800 group-hover:underline">
-                Abrir documento <span aria-hidden="true" className="ml-2">→</span>
-              </span>
-            </Link>
-          ))}
+        <section id="documentos" aria-labelledby="documents-heading">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-green-700">Modelos disponíveis</p>
+              <h2 id="documents-heading" className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+                Escolha um documento
+              </h2>
+            </div>
+            <p className="text-sm text-slate-600">Preenchimento simples. PDF pronto para revisar.</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            {documents.map((document) => (
+              <Link
+                key={document.href}
+                href={document.href}
+                className="group rounded-3xl border border-slate-300 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-green-500 hover:shadow-lg hover:shadow-amber-950/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-green-600"
+              >
+                <span className={`mb-5 block h-2 rounded-full bg-gradient-to-r ${document.accent}`} />
+                <h3 className="text-lg font-semibold leading-snug text-slate-950">{document.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{document.description}</p>
+                <span className="mt-5 inline-flex items-center text-sm font-semibold text-emerald-800 group-hover:text-emerald-950">
+                  Abrir documento <span aria-hidden="true" className="ml-2">→</span>
+                </span>
+              </Link>
+            ))}
+          </div>
         </section>
 
-        <aside className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950">
-          Privacidade: modelos de prescrição são armazenados na conta autenticada. Os dados
-          de pacientes e profissionais ficam apenas na memória desta sessão e não são enviados
-          ao Supabase. A busca de medicamentos envia somente o termo pesquisado ao servidor
-          para consultar o catálogo, sem dados do paciente. Na ficha antirrábica, o preenchimento
-          e o PDF permanecem no navegador.
+        <aside className="rounded-2xl border border-green-300 bg-green-50/80 px-5 py-4 text-xs leading-5 text-slate-700">
+          <h2 className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-900">Privacidade dos dados</h2>
+          Modelos de prescrição são armazenados na conta autenticada. Os dados de pacientes e profissionais ficam apenas na memória desta sessão e não são enviados ao Supabase. A busca de medicamentos envia somente o termo pesquisado ao servidor para consultar o catálogo, sem dados do paciente. Na ficha antirrábica, o preenchimento e o PDF permanecem no navegador.
         </aside>
       </div>
     </main>
