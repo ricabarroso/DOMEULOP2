@@ -27,7 +27,7 @@ export default function AccountDashboard() {
     try {
       const supabase = createClient();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError && userError.name !== "AuthSessionMissingError") throw userError;
       if (!user?.email) {
         setEmail("");
         setApproved(false);
@@ -151,7 +151,7 @@ export default function AccountDashboard() {
     return (
       <div className="flex flex-wrap items-center gap-3">
         <Link href="/login" className="rounded-xl bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
-          Entrar com Google ou Apple
+          Entrar ou criar conta
         </Link>
         {message && <p role="alert" className="text-sm text-red-800">{message}</p>}
       </div>
