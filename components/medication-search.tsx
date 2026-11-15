@@ -68,6 +68,7 @@ export default function MedicationSearch() {
   const [results, setResults] = useState<MedicationCatalogEntry[]>([]);
   const [selected, setSelected] = useState<MedicationCatalogEntry | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [source, setSource] = useState<CatalogResponse["source"]>();
@@ -89,12 +90,27 @@ export default function MedicationSearch() {
   const [instructions, setInstructions] = useState("");
   const [posology, setPosology] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const listId = "medication-search-results";
   const searchCanStart = hasThreeLetters(query.trim());
 
   useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && searchContainerRef.current?.contains(event.target)) return;
+      setIsOpen(false);
+      setResults([]);
+      setActiveIndex(-1);
+      setLoading(false);
+      setError("");
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, []);
+
+  useEffect(() => {
     const trimmedQuery = query.trim();
-    if (!hasThreeLetters(trimmedQuery)) return;
+    if (!isOpen || !hasThreeLetters(trimmedQuery)) return;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -126,11 +142,12 @@ export default function MedicationSearch() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [isOpen, query]);
 
   const selectMedication = (entry: MedicationCatalogEntry) => {
     setSelected(entry);
     setQuery(medicationDisplayName(entry));
+    setIsOpen(false);
     setResults([]);
     setActiveIndex(-1);
     setWeight("");
@@ -159,8 +176,11 @@ export default function MedicationSearch() {
       event.preventDefault();
       selectMedication(results[activeIndex]);
     } else if (event.key === "Escape") {
+      setIsOpen(false);
       setResults([]);
       setActiveIndex(-1);
+      setLoading(false);
+      setError("");
     }
   };
 
@@ -243,7 +263,7 @@ export default function MedicationSearch() {
         Confira a bula profissional vigente da apresentação antes de prescrever.
       </p>
 
-      <div className="relative mt-5">
+      <div ref={searchContainerRef} className="relative mt-5">
         <label htmlFor="medication-search-input" className="mb-2 block text-sm font-medium text-slate-700">
           Medicamento
         </label>
@@ -253,13 +273,17 @@ export default function MedicationSearch() {
           type="search"
           role="combobox"
           aria-autocomplete="list"
-          aria-expanded={results.length > 0}
+          aria-expanded={isOpen && results.length > 0}
           aria-controls={listId}
           aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
           autoComplete="off"
           value={query}
+          onFocus={() => {
+            if (searchCanStart) setIsOpen(true);
+          }}
           onChange={(event) => {
             setQuery(event.target.value);
+            setIsOpen(true);
             setSelected(null);
             setResults([]);
             setError("");
@@ -272,12 +296,12 @@ export default function MedicationSearch() {
           placeholder="Digite ao menos 3 letras"
           className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 outline-none placeholder:text-slate-600 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
         />
-        {loading && searchCanStart && <p role="status" className="mt-2 text-sm text-slate-600">Pesquisando no catálogo público…</p>}
-        {!searchCanStart && query.trim().length > 0 && (
+        {isOpen && loading && searchCanStart && <p role="status" className="mt-2 text-sm text-slate-600">Pesquisando no catálogo público…</p>}
+        {isOpen && !searchCanStart && query.trim().length > 0 && (
           <p className="mt-2 text-sm text-slate-600">Digite ao menos 3 letras para iniciar a busca.</p>
         )}
-        {searchCanStart && error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
-        {searchCanStart && results.length > 0 && (
+        {isOpen && searchCanStart && error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
+        {isOpen && searchCanStart && results.length > 0 && (
           <ul id={listId} role="listbox" aria-label="Sugestões de medicamentos" className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
             {results.map((entry, index) => (
               <li
@@ -310,7 +334,7 @@ export default function MedicationSearch() {
             ))}
           </ul>
         )}
-        {searchCanStart && !loading && !error && results.length === 0 && (
+        {isOpen && searchCanStart && !loading && !error && results.length === 0 && (
           <p className="mt-2 text-sm text-slate-600">Nenhuma apresentação encontrada para essa busca.</p>
         )}
       </div>

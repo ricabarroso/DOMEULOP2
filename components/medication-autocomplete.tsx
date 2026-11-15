@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import {
   anvisaBularioSearchUrl,
@@ -76,8 +76,9 @@ export default function MedicationAutocomplete({
   const searchCanStart = hasThreeLetters(value.trim());
   const requestId = useRef(0);
   const activeController = useRef<AbortController | null>(null);
+  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
 
-  const closeSuggestions = () => {
+  const closeSuggestions = useCallback(() => {
     requestId.current += 1;
     activeController.current?.abort();
     activeController.current = null;
@@ -89,7 +90,17 @@ export default function MedicationAutocomplete({
     setError("");
     setWarning("");
     setSearchedQuery("");
-  };
+  }, []);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && suggestionsContainerRef.current?.contains(event.target)) return;
+      closeSuggestions();
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [closeSuggestions]);
 
   const startSearch = (query: string) => {
     requestId.current += 1;
@@ -168,7 +179,7 @@ export default function MedicationAutocomplete({
   };
 
   return (
-    <div className="block text-sm font-medium text-slate-700">
+    <div ref={suggestionsContainerRef} className="block text-sm font-medium text-slate-700">
       <label htmlFor={`${listId}-input`} className="mb-2 block">{label}</label>
       <div className="relative">
         <input
