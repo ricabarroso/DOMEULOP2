@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Marcellus } from "next/font/google";
 import { DocumentSessionProvider } from "@/components/document-session-provider";
 import "./globals.css";
+import "./interface-theme.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,4 +36,4 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </body>
     </html>
   );
-}
+}  
