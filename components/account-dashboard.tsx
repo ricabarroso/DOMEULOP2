@@ -163,7 +163,7 @@ export default function AccountDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
         <div>
           <p className="font-semibold text-emerald-950">{email}</p>
-          <p className="text-sm text-emerald-800">
+          <p className="text-sm font-semibold text-emerald-950">
             {approved ? "Acesso autorizado." : "Cadastro aguardando aprovação."}
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function AccountDashboard() {
 
       {adminEmails.has(email.toLocaleLowerCase("en-US")) && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-semibold">Cadastros aguardando aprovação</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Cadastros aguardando aprovação</h2>
           {pendingUsers.length === 0 ? (
             <p className="mt-2 text-sm text-slate-600">Não há novos cadastros pendentes.</p>
           ) : (
@@ -199,7 +199,7 @@ export default function AccountDashboard() {
               ))}
             </ul>
           )}
-          <h3 className="mt-6 text-base font-semibold">Contas com acesso autorizado</h3>
+          <h3 className="mt-6 text-base font-semibold text-slate-950">Contas com acesso autorizado</h3>
           {approvedUsers.length === 0 ? (
             <p className="mt-2 text-sm text-slate-600">Não há outras contas autorizadas.</p>
           ) : (
