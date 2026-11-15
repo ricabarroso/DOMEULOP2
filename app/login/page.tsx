@@ -9,10 +9,6 @@ export default function LoginPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Acesso à conta</p>
           <h1 className="mt-2 text-3xl font-bold text-slate-950">Entrar no gerador</h1>
-          <p className="mt-3 leading-6 text-slate-600">
-            Entre com e-mail e senha (o cadastro exige confirmar o e-mail). Os três emails administradores informados têm acesso imediato.
-            Novos cadastros ficam pendentes até um administrador aprová-los.
-          </p>
         </div>
         <EmailSignIn />
         <p className="text-xs leading-5 text-slate-500">
