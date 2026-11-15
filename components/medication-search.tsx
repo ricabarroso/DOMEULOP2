@@ -75,6 +75,10 @@ export default function MedicationSearch() {
   const [catmatError, setCatmatError] = useState("");
   const [anvisaError, setAnvisaError] = useState("");
   const [weight, setWeight] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
+  const [minimumAgeMonths, setMinimumAgeMonths] = useState("");
+  const [maximumAgeMonths, setMaximumAgeMonths] = useState("");
+  const [ageAssessment, setAgeAssessment] = useState<"within" | "outside" | "unverified" | null>(null);
   const [labelDose, setLabelDose] = useState("");
   const [doseBasis, setDoseBasis] = useState<"per-dose" | "per-day">("per-dose");
   const [dosesPerDay, setDosesPerDay] = useState("");
@@ -130,6 +134,10 @@ export default function MedicationSearch() {
     setResults([]);
     setActiveIndex(-1);
     setWeight("");
+    setAgeMonths("");
+    setMinimumAgeMonths("");
+    setMaximumAgeMonths("");
+    setAgeAssessment(null);
     setLabelDose("");
     setMaximumDose("");
     setDosesPerDay("");
@@ -160,6 +168,9 @@ export default function MedicationSearch() {
     setDoseError("");
     setCalculatedDose(null);
     const parsedWeight = Number(weight.replace(",", "."));
+    const parsedAgeMonths = ageMonths.trim() ? Number(ageMonths.replace(",", ".")) : Number.NaN;
+    const parsedMinimumAgeMonths = minimumAgeMonths.trim() ? Number(minimumAgeMonths.replace(",", ".")) : null;
+    const parsedMaximumAgeMonths = maximumAgeMonths.trim() ? Number(maximumAgeMonths.replace(",", ".")) : null;
     const parsedLabelDose = Number(labelDose.replace(",", "."));
     const parsedMaximumDose = maximumDose.trim() ? Number(maximumDose.replace(",", ".")) : null;
     const parsedDosesPerDay = Number(dosesPerDay);
@@ -172,6 +183,27 @@ export default function MedicationSearch() {
       setDoseError("Selecione uma apresentação antes de calcular.");
       return;
     }
+    if (!ageMonths.trim() || !Number.isFinite(parsedAgeMonths) || parsedAgeMonths < 0) {
+      setDoseError("Informe a idade do paciente em meses.");
+      return;
+    }
+    if (
+      (parsedMinimumAgeMonths !== null && (!Number.isFinite(parsedMinimumAgeMonths) || parsedMinimumAgeMonths < 0)) ||
+      (parsedMaximumAgeMonths !== null && (!Number.isFinite(parsedMaximumAgeMonths) || parsedMaximumAgeMonths < 0)) ||
+      (parsedMinimumAgeMonths !== null && parsedMaximumAgeMonths !== null && parsedMinimumAgeMonths > parsedMaximumAgeMonths)
+    ) {
+      setDoseError("Confira os limites de idade informados conforme a bula.");
+      return;
+    }
+    const ageOutsideLabelRange =
+      (parsedMinimumAgeMonths !== null && parsedAgeMonths < parsedMinimumAgeMonths) ||
+      (parsedMaximumAgeMonths !== null && parsedAgeMonths > parsedMaximumAgeMonths);
+    if (ageOutsideLabelRange) {
+      setAgeAssessment("outside");
+      setDoseError("A idade está fora da faixa informada da bula. O cálculo foi interrompido.");
+      return;
+    }
+    setAgeAssessment(parsedMinimumAgeMonths !== null || parsedMaximumAgeMonths !== null ? "within" : "unverified");
     const result = calculateWeightDose({
       weightKg: parsedWeight,
       labeledDoseMgPerKg: parsedLabelDose,
@@ -205,7 +237,7 @@ export default function MedicationSearch() {
   return (
     <section aria-labelledby="medication-search-heading" className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm md:p-8">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-800">Busca de medicamentos</p>
-      <h2 id="medication-search-heading" className="mt-2 text-2xl font-bold">Encontre medicamentos e apresentações</h2>
+      <h2 id="medication-search-heading" className="mt-2 text-2xl font-bold text-slate-950">Encontre medicamentos e apresentações</h2>
       <p className="mt-2 max-w-3xl leading-6 text-slate-600">
         Pesquise por princípio ativo ou nome comercial nos catálogos CATMAT e de registros ativos da Anvisa.
         Confira a bula profissional vigente da apresentação antes de prescrever.
@@ -238,7 +270,7 @@ export default function MedicationSearch() {
           }}
           onKeyDown={onSearchKeyDown}
           placeholder="Digite ao menos 3 letras"
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 outline-none placeholder:text-slate-600 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
         />
         {loading && searchCanStart && <p role="status" className="mt-2 text-sm text-slate-600">Pesquisando no catálogo público…</p>}
         {!searchCanStart && query.trim().length > 0 && (
@@ -352,7 +384,7 @@ export default function MedicationSearch() {
           <fieldset className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
             <legend className="px-1 font-semibold text-slate-900">Cálculo com dose por peso informada pela bula</legend>
             <p className="text-sm leading-5 text-slate-600">
-              Ferramenta aritmética: não recomenda dose. Informe exatamente a dose da bula profissional para a
+              Cálculo aritmético com dados que você transcrever da bula profissional; não é recomendação de tratamento. Informe a dose da bula profissional para a
               indicação e faixa etária em questão.
             </p>
             {selected.source === "anvisa" && (
@@ -374,6 +406,39 @@ export default function MedicationSearch() {
               Conferi a dose, a indicação e a faixa etária na bula profissional vigente da Anvisa.
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Idade do paciente (meses)
+                <input type="number" min="0" step="any" value={ageMonths} onChange={(event) => {
+                  setAgeMonths(event.target.value);
+                  setCalculatedDose(null);
+                  setAgeAssessment(null);
+                }} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <div className="sm:col-span-2">
+                <p className="text-sm font-medium text-slate-700">Faixa etária permitida na bula (meses)</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Informe os limites mínimo e/ou máximo da bula profissional; sem essa informação, a adequação etária não pode ser verificada.
+                </p>
+                <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm text-slate-700">
+                    Idade mínima
+                    <input type="number" min="0" step="any" value={minimumAgeMonths} onChange={(event) => {
+                      setMinimumAgeMonths(event.target.value);
+                      setCalculatedDose(null);
+                      setAgeAssessment(null);
+                    }} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                  </label>
+                  <label className="block text-sm text-slate-700">
+                    Idade máxima
+                    <input type="number" min="0" step="any" value={maximumAgeMonths} onChange={(event) => {
+                      setMaximumAgeMonths(event.target.value);
+                      setCalculatedDose(null);
+                      setAgeAssessment(null);
+                    }} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                  </label>
+                </div>
+              </div>
+
               <label className="block text-sm font-medium text-slate-700">
                 Peso (kg)
                 <input type="number" min="0.1" step="0.1" value={weight} onChange={(event) => {
@@ -418,6 +483,15 @@ export default function MedicationSearch() {
             <button type="button" onClick={calculateDose} className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
               Calcular valor informado
             </button>
+            {ageAssessment && (
+              <p role="status" className={ageAssessment === "within" ? "text-sm font-medium text-emerald-800" : ageAssessment === "outside" ? "text-sm font-medium text-red-800" : "text-sm font-medium text-amber-900"}>
+                {ageAssessment === "within"
+                  ? "Idade dentro dos limites etários informados; isso não confirma indicação nem substitui a avaliação clínica."
+                  : ageAssessment === "outside"
+                    ? "Idade fora dos limites informados na bula."
+                    : "Adequação etária não verificada: confira a bula profissional antes de concluir se o medicamento é apropriado."}
+              </p>
+            )}
             {doseError && <p role="alert" className="text-sm text-red-700">{doseError}</p>}
             {calculatedDose && (
               <div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-950">
