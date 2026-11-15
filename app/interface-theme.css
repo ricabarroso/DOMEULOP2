@@ -1,0 +1,65 @@
+@media screen {
+  :root {
+    --background: #08150e;
+    --foreground: #f6f0df;
+    --card: #f7f2e3;
+    --border: rgba(195, 143, 16, 0.4);
+    --color-white: #f7f2e3;
+    --color-slate-50: #f7f2e3;
+    --color-slate-100: #ece4d0;
+    --color-slate-200: #d9cba8;
+    --color-slate-300: #c0ad7b;
+    --color-slate-400: #9c8752;
+    --color-slate-500: #786344;
+    --color-slate-600: #5d4c32;
+    --color-slate-700: #453b2c;
+    --color-slate-800: #2b3127;
+    --color-slate-900: #1d281f;
+    --color-slate-950: #102018;
+    --color-emerald-50: #eff4eb;
+    --color-emerald-100: #dce8d8;
+    --color-emerald-200: #c0d0bb;
+    --color-emerald-300: #91b196;
+    --color-emerald-400: #5f8c6b;
+    --color-emerald-500: #3f704c;
+    --color-emerald-600: #28593a;
+    --color-emerald-700: #173e29;
+    --color-emerald-800: #123221;
+    --color-emerald-900: #0c2518;
+    --color-emerald-950: #071810;
+    --color-green-50: #fbf3dc;
+    --color-green-100: #f2e2b4;
+    --color-green-200: #e8cf81;
+    --color-green-300: #ddb84e;
+    --color-green-400: #d5a82f;
+    --color-green-500: #c89518;
+    --color-green-600: #a97910;
+    --color-green-700: #815b0b;
+    --color-green-800: #60450b;
+    --color-green-900: #41300b;
+    --color-green-950: #281e09;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at 50% -18%, rgba(35, 72, 49, 0.42), transparent 62%),
+      var(--background);
+    color: var(--foreground);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-button), Georgia, serif;
+    letter-spacing: 0.01em;
+  }
+
+  [aria-labelledby="medication-search-heading"] > p:first-child {
+    font-size: 0.75rem;
+  }
+
+  [aria-labelledby="medication-search-heading"] > p:nth-of-type(2) {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+}
